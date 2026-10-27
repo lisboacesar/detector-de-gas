@@ -1,0 +1,16 @@
+# Credenciais: nunca enviar para o GitHub
+firmware/DetectorDeGasComDashboard/secrets.h
+ferramentas/config.ini
+
+# Banco de dados gerado pelo coletor
+ferramentas/dados/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Sistema
+.DS_Store
+Thumbs.db

@@ -1,0 +1,39 @@
+digraph G {
+  graph [rankdir=TB, fontname="Helvetica", fontsize=12, nodesep=0.3, ranksep=0.42, pad=0.2, bgcolor="white", newrank=true];
+  node  [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=11, fillcolor="#ffffff", color="#5d6b7a", penwidth=1.1, margin="0.14,0.07"];
+  edge  [fontname="Helvetica", fontsize=9.5, color="#5d6b7a", fontcolor="#33404d", arrowsize=0.7];
+
+  subgraph cluster_borda {
+    label="Borda: protótipo na cozinha"; labeljust=l; style="rounded,filled"; fillcolor="#eef5ee"; color="#1f8a4c"; fontcolor="#1f5f36";
+    mq2   [label="Sensor MQ-2\n(5 V)"];
+    div   [label="Divisor 10 kΩ / 20 kΩ\n+ capacitor 100 nF"];
+    pot   [label="Potenciômetro 10 kΩ (3,3 V)\n+ capacitor 100 nF"];
+    esp   [label="ESP32-C3 Super Mini\l• leitura a cada 500 ms, média de 16 amostras\l• limite ajustável de 300 a 3500, histerese de 50\l• alarme local que funciona sem rede\l• painel local HTTP (detector-gas.local)\l", penwidth=1.6];
+    alerta [label="GPIO5: alerta\n(LED vermelho / buzzer)"];
+    verde [label="GPIO6:\nLED verde"];
+    mq2 -> div [label=" AO"];
+    div -> esp [label=" GPIO3"];
+    pot -> esp [label=" GPIO4"];
+    esp -> alerta; esp -> verde;
+    {rank=same; mq2; pot;}
+  }
+
+  subgraph cluster_nuvem {
+    label="Nuvem"; labeljust=l; style="rounded,filled"; fillcolor="#eef2f8"; color="#1d5fa8"; fontcolor="#163f6e";
+    broker [label="EMQX Cloud Serverless (broker MQTT)\lusuário e senha por cliente; ACL: painel sem permissão de publicar\l\ldetector-gas/leitura      a cada 1 s e na mudança de estado (retida)\ldetector-gas/historico   a cada 60 s (retida)\ldetector-gas/status       online / offline por LWT (retida)\l", penwidth=1.6];
+  }
+
+  subgraph cluster_uso {
+    label="Visualização e armazenamento"; labeljust=l; style="rounded,filled"; fillcolor="#f7f3ec"; color="#a86500"; fontcolor="#6b4100";
+    web    [label="Aplicativo web\n(GitHub Pages, mqtt.js)"];
+    coletor [label="Coletor\n(Python)"];
+    db     [label="Banco\nSQLite", shape=cylinder, style="filled", fillcolor="#ffffff"];
+    rel    [label="Relatório\n(métricas, CSV, gráfico)"];
+    coletor -> db -> rel;
+    {rank=same; web; coletor; db; rel;}
+  }
+
+  esp -> broker [label=" Wi-Fi 2,4 GHz, MQTT sobre TLS (porta 8883)", penwidth=1.5, color="#1d5fa8"];
+  broker -> web [label=" WSS (porta 8084)", penwidth=1.5, color="#1d5fa8"];
+  broker -> coletor [label=" MQTT/TLS (8883)", penwidth=1.5, color="#1d5fa8"];
+}

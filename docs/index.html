@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Detector de Gás</title>
+<script src="https://cdn.jsdelivr.net/npm/mqtt@5.15.2/dist/mqtt.min.js"></script>
+<script>
+  // === CONFIGURACAO ===========================================
+  // Endereco do deployment EMQX (o mesmo do ESP32). Nao e segredo.
+  const MQTT_HOST    = "z2d90268.ala.us-east-1.emqxsl.com";
+  // O usuario e a senha NAO ficam no codigo: a pagina pede na primeira vez
+  // e guarda apenas no navegador de quem abriu (localStorage).
+  // Use o usuario "dashboard", que no EMQX tem a PUBLICACAO BLOQUEADA.
+  // Prefixo dos topicos (igual ao MQTT_TOPICO_BASE do ESP32)
+  const TOPICO_BASE  = "detector-gas";
+  // Quantas leituras mostrar na lista
+  const MAX_LISTA    = 120;
+  // Depois de quantos segundos sem leitura nova o detector e considerado parado
+  const SEGUNDOS_SEM_DADOS = 5;
+  // ============================================================
+</script>
+<style>
+  :root{
+    --fundo:#e9edf1; --painel:#ffffff; --texto:#1d2733; --suave:#5d6b7a;
+    --seguro:#1f8a4c; --perigo:#c4291c; --aviso:#a86500; --trilho:#d3dae2; --linha:#c9d1da;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --fundo:#141a20; --painel:#1e262e; --texto:#e6ebf0; --suave:#93a1b0;
+      --seguro:#3fbf73; --perigo:#ff5a4a; --aviso:#f0a83a; --trilho:#2d3742; --linha:#2d3742;
+    }
+  }
+  *{box-sizing:border-box}
+  html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+       background:var(--fundo);color:var(--texto)}
+  main{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+  h1{font-size:1.25rem;margin:0}
+  #conexao{font-size:.85rem;color:var(--suave);display:flex;align-items:center;gap:6px}
+  #conexao::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--ponto,var(--suave))}
+  .painel{background:var(--painel);border-radius:10px;padding:20px;margin-bottom:16px}
+  .leitura{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  #valor{font-size:3.5rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+  #status{font-weight:600;font-size:1.05rem;text-align:right}
+  #detalhe{color:var(--suave);font-size:.85rem;margin-top:8px;min-height:1.2em}
+  .barra{position:relative;height:22px;background:var(--trilho);border-radius:11px;
+         overflow:hidden;margin-top:14px}
+  #preenche{height:100%;width:0;background:var(--seguro);transition:width .3s,background .3s}
+  #limite{position:absolute;top:0;bottom:0;width:3px;background:var(--texto);opacity:.6;
+          transition:left .3s;display:none}
+  .escala{display:flex;justify-content:space-between;color:var(--suave);
+          font-size:.8rem;margin-top:6px}
+  #txtLimite{color:var(--texto);font-weight:600}
+  h2{font-size:1rem;margin:0 0 10px}
+  .tabela{max-height:50vh;overflow-y:auto}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th,td{text-align:left;padding:7px 4px;border-bottom:1px solid var(--linha)}
+  th{color:var(--suave);font-weight:500;font-size:.85rem;position:sticky;top:0;background:var(--painel)}
+  td.alto{color:var(--perigo);font-weight:700}
+  .vazio{color:var(--suave);padding:12px 4px}
+  .parado #valor, .parado .barra{opacity:.45}
+  #acesso{display:none}
+  #acesso label{display:block;font-size:.85rem;color:var(--suave);margin:10px 0 4px}
+  #acesso input{width:100%;padding:9px 10px;border:1px solid var(--linha);border-radius:6px;
+                background:var(--fundo);color:var(--texto);font:inherit}
+  #acesso button{margin-top:14px;padding:9px 16px;border:0;border-radius:6px;
+                 background:var(--seguro);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+  #msgAcesso{color:var(--perigo);font-size:.85rem;margin-top:10px;min-height:1.2em}
+  #sair{background:none;border:0;color:var(--suave);font:inherit;font-size:.8rem;
+        text-decoration:underline;cursor:pointer;padding:0;margin-left:10px;display:none}
+  .topo-dir{display:flex;align-items:center}
+  .oculto{display:none}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Detector de gás</h1>
+    <div class="topo-dir">
+      <div id="conexao">Conectando ao servidor…</div>
+      <button id="sair" type="button" title="Apagar a senha guardada neste navegador">Sair</button>
+    </div>
+  </header>
+
+  <section class="painel" id="acesso">
+    <h2>Acesso ao painel</h2>
+    <p style="margin:0;color:var(--suave);font-size:.9rem">
+      Informe o usuário e a senha de leitura do MQTT. Eles ficam guardados só neste navegador.
+    </p>
+    <label for="usuario">Usuário</label>
+    <input id="usuario" autocomplete="username" value="dashboard">
+    <label for="senha">Senha</label>
+    <input id="senha" type="password" autocomplete="current-password">
+    <button id="entrar" type="button">Entrar</button>
+    <div id="msgAcesso"></div>
+  </section>
+
+  <section class="painel oculto" id="painelLeitura">
+    <div class="leitura">
+      <div id="valor">--</div>
+      <div id="status">Aguardando dados</div>
+    </div>
+    <div id="detalhe"></div>
+    <div class="barra"><div id="preenche"></div><div id="limite"></div></div>
+    <div class="escala"><span>0</span><span id="txtLimite"></span><span>4095</span></div>
+  </section>
+
+  <section class="painel oculto" id="painelLista">
+    <h2>Últimas leituras</h2>
+    <div class="tabela">
+      <table>
+        <thead><tr><th>Hora</th><th>Nível</th><th>Limite</th></tr></thead>
+        <tbody id="lista"><tr><td colspan="3" class="vazio">As leituras aparecem aqui assim que o detector enviar.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+
+let lista = [];          // [tempo_ms, nivel, limite, critico], mais recente primeiro
+let atual = null;        // ultima leitura recebida
+let espOnline = null;    // status publicado pelo ESP32
+
+const hora = t => new Date(t).toLocaleTimeString('pt-BR');
+
+function setConexao(texto, cor){
+  $('conexao').textContent = texto;
+  $('conexao').style.setProperty('--ponto', cor);
+}
+
+function render(){
+  if (atual){
+    const parado = espOnline === false || (Date.now() - atual.t) > SEGUNDOS_SEM_DADOS * 1000;
+    $('painelLeitura').classList.toggle('parado', parado);
+
+    $('valor').textContent = atual.v;
+    if (parado){
+      $('status').textContent = 'Detector sem enviar dados';
+      $('status').style.color = 'var(--aviso)';
+      $('detalhe').textContent = 'Última leitura às ' + hora(atual.t) +
+        '. Verifique a energia e o Wi-Fi do detector.';
+    } else {
+      $('status').textContent = atual.c ? 'Nível crítico' : 'Normal';
+      $('status').style.color = atual.c ? 'var(--perigo)' : 'var(--seguro)';
+      $('detalhe').textContent = 'Atualizado às ' + hora(atual.t);
+    }
+
+    $('preenche').style.width = (atual.v / 4095 * 100) + '%';
+    $('preenche').style.background = atual.c ? 'var(--perigo)' : 'var(--seguro)';
+    $('limite').style.display = 'block';
+    $('limite').style.left = (atual.l / 4095 * 100) + '%';
+    $('txtLimite').textContent = 'Limite ' + atual.l;
+  }
+
+  if (lista.length){
+    // Monta a tabela com textContent: dados vindos da rede sao tratados
+    // sempre como texto, nunca interpretados como HTML.
+    const linhas = lista.map(([t, v, l, c]) => {
+      const tr = document.createElement('tr');
+      const tdHora = document.createElement('td');
+      const tdNivel = document.createElement('td');
+      const tdLimite = document.createElement('td');
+      tdHora.textContent = hora(t);
+      tdNivel.textContent = v;
+      tdLimite.textContent = l;
+      if (c) tdNivel.className = 'alto';
+      tr.append(tdHora, tdNivel, tdLimite);
+      return tr;
+    });
+    $('lista').replaceChildren(...linhas);
+  }
+}
+
+const CHAVE = 'detector-gas-acesso';
+let cliente = null;
+
+function lerAcesso(){
+  try { return JSON.parse(localStorage.getItem(CHAVE)); } catch { return null; }
+}
+function salvarAcesso(acesso){
+  try { localStorage.setItem(CHAVE, JSON.stringify(acesso)); } catch {}
+}
+function apagarAcesso(){
+  try { localStorage.removeItem(CHAVE); } catch {}
+}
+
+function mostrarAcesso(msg){
+  $('acesso').style.display = 'block';
+  $('painelLeitura').classList.add('oculto');
+  $('painelLista').classList.add('oculto');
+  $('sair').style.display = 'none';
+  $('msgAcesso').textContent = msg || '';
+  setConexao('Aguardando acesso', 'var(--suave)');
+}
+
+function conectar(acesso){
+  $('acesso').style.display = 'none';
+  $('painelLeitura').classList.remove('oculto');
+  $('painelLista').classList.remove('oculto');
+  $('sair').style.display = 'inline';
+  setConexao('Conectando ao servidor…', 'var(--suave)');
+
+  cliente = mqtt.connect('wss://' + MQTT_HOST + ':8084/mqtt', {
+    username: acesso.usuario,
+    password: acesso.senha,
+    clientId: 'dashboard-' + Math.random().toString(16).slice(2, 10),
+    clean: true,
+    reconnectPeriod: 3000,
+    connectTimeout: 10000
+  });
+
+  cliente.on('connect', () => {
+    setConexao('Conectado', 'var(--seguro)');
+    cliente.subscribe(TOPICO_BASE + '/#');
+  });
+  cliente.on('reconnect', () => setConexao('Reconectando…', 'var(--aviso)'));
+  cliente.on('offline',   () => setConexao('Sem internet', 'var(--perigo)'));
+  cliente.on('error', e => {
+    if (/auth|Not authorized|Bad username/i.test(e.message)){
+      cliente.end(true);
+      apagarAcesso();
+      mostrarAcesso('Usuário ou senha incorretos. Tente de novo.');
+    } else {
+      setConexao('Erro: ' + e.message, 'var(--perigo)');
+    }
+  });
+  cliente.on('message', aoReceber);
+}
+
+$('entrar').addEventListener('click', () => {
+  const acesso = { usuario: $('usuario').value.trim(), senha: $('senha').value };
+  if (!acesso.usuario || !acesso.senha){
+    $('msgAcesso').textContent = 'Preencha usuário e senha.';
+    return;
+  }
+  salvarAcesso(acesso);
+  conectar(acesso);
+});
+$('senha').addEventListener('keydown', e => { if (e.key === 'Enter') $('entrar').click(); });
+$('sair').addEventListener('click', () => {
+  if (cliente) cliente.end(true);
+  apagarAcesso();
+  location.reload();
+});
+
+function aoReceber(topico, payload){
+  const texto = payload.toString();
+
+  if (topico === TOPICO_BASE + '/status'){
+    espOnline = (texto === 'online');
+    render();
+    return;
+  }
+
+  let d;
+  try { d = JSON.parse(texto); } catch { return; }
+
+  if (topico === TOPICO_BASE + '/leitura'){
+    atual = d;
+    if (!lista.length || d.t > lista[0][0]){
+      lista.unshift([d.t, d.v, d.l, d.c]);
+      if (lista.length > MAX_LISTA) lista.length = MAX_LISTA;
+    }
+    render();
+  }
+
+  if (topico === TOPICO_BASE + '/historico' && Array.isArray(d.h)){
+    // Acrescenta so as leituras mais antigas que as que ja estao na lista
+    const maisAntiga = lista.length ? lista[lista.length - 1][0] : Infinity;
+    for (const item of d.h){
+      if (item[0] < maisAntiga) lista.push(item);
+    }
+    lista.sort((a, b) => b[0] - a[0]);
+    if (lista.length > MAX_LISTA) lista.length = MAX_LISTA;
+    render();
+  }
+}
+
+// Reavalia a cada segundo se o detector parou de mandar dados
+setInterval(render, 1000);
+
+// Ao abrir: usa o acesso guardado neste navegador ou pede usuario e senha
+const acessoGuardado = lerAcesso();
+if (acessoGuardado && acessoGuardado.usuario && acessoGuardado.senha) conectar(acessoGuardado);
+else mostrarAcesso();
+</script>
+</body>
+</html>
