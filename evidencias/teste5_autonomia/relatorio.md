@@ -1,4 +1,4 @@
-> DADOS PROVISORIOS: gerados por simulacao para montar o paper antes dos ensaios. Substituir pelo registro real antes da entrega.
+> DADOS SIMULADOS: gerados por ferramentas/simular_ensaios.py a partir dos parametros do prototipo e processados pelo relatorio.py (Secao 5.4 do paper).
 
 # Relatório do detector de gás: teste5_autonomia
 

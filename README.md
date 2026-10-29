@@ -100,6 +100,7 @@ Outras ferramentas:
 ```bash
 python registrar_serial.py COM5     # grava o monitor serial com horário (fechar a Arduino IDE antes)
 python teste_seguranca.py           # testa acesso anônimo, senha errada e publicação sem permissão
+python simular_ensaios.py           # reproduz os ensaios do paper por simulação (ver evidencias/README.md)
 ```
 
 ## Segurança

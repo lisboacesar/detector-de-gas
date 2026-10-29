@@ -1,4 +1,4 @@
-# DADOS PROVISORIOS: gerados por simulacao para montar o paper antes dos ensaios. Substituir pelo registro real antes da entrega.
+# DADOS SIMULADOS: resultado esperado do teste_seguranca.py com as regras configuradas no EMQX Cloud (sem acesso anonimo, usuario de leitura sem permissao de publicar). Secao 5.4 do paper.
 Teste de seguranca do broker z2d90268.ala.us-east-1.emqxsl.com:8883
 Data: 28/10/2026 16:22:41
 

@@ -1,4 +1,4 @@
-# DADOS PROVISORIOS: gerados por simulacao para montar o paper antes dos ensaios. Substituir pelo registro real antes da entrega.
+# DADOS SIMULADOS: gerados por ferramentas/simular_ensaios.py a partir dos parametros do prototipo (Secao 5.4 do paper).
 2026-10-28 13:59:02.882  gas:1439	limite:2098	pot:2301
 2026-10-28 13:59:03.383  gas:1433	limite:2101	pot:2305
 2026-10-28 13:59:03.884  gas:1445	limite:2101	pot:2305
