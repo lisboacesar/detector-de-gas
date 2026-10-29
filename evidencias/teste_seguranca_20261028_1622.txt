@@ -1,0 +1,17 @@
+# DADOS PROVISORIOS: gerados por simulacao para montar o paper antes dos ensaios. Substituir pelo registro real antes da entrega.
+Teste de seguranca do broker z2d90268.ala.us-east-1.emqxsl.com:8883
+Data: 28/10/2026 16:22:41
+
+1. Conectar sem usuario e senha
+   Resultado: RECUSADO (esperado)
+   Detalhe do broker: Bad user name or password
+
+2. Conectar com o usuario 'dashboard' e senha errada
+   Resultado: RECUSADO (esperado)
+   Detalhe do broker: Bad user name or password
+
+3. Publicar em detector-gas/teste-seguranca com o usuario de leitura 'dashboard'
+   Resultado: RECUSADO (esperado)
+   Detalhe do broker: PUBACK: Not authorized; mensagem nao chegou ao topico; conexao mantida
+
+Resumo: 3 de 3 tentativas indevidas recusadas.

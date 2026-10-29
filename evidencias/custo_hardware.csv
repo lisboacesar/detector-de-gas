@@ -1,0 +1,14 @@
+componente;quantidade_usada;embalagem;preco_rs;fonte;observacao
+Placa ESP32-C3 Super Mini;1;unidade;29,90;Smart Kits;
+Modulo sensor de gas MQ-2;1;unidade;17,96;Eletrogate;preco no Pix
+Potenciometro linear 10 kOhm;1;unidade;1,90;Eletrogate;
+LED difuso 5 mm vermelho;1;unidade;0,15;Eletrogate;
+LED difuso 5 mm verde;1;unidade;0,15;Eletrogate;
+Buzzer ativo 5 V;1;unidade;2,76;Eletrogate;preco no Pix
+Resistor 150 Ohm 1/4 W;2;pacote com 10;0,90;Eletrogate;
+Resistor 10 kOhm 1/4 W;1;pacote com 10;0,90;Eletrogate;
+Resistor 20 kOhm 1/4 W;1;pacote com 10;0,90;estimado;mesmo preco do pacote de 22 kOhm da Eletrogate
+Capacitor ceramico 100 nF;2;unidade;0,60;estimado;sem preco na Eletrogate no dia (R$ 0,30 cada)
+Protoboard 830 pontos;1;unidade;12,26;Eletrogate;preco no Pix
+Jumpers macho-macho 20 cm;diversos;pacote com 20;4,90;Eletrogate;
+TOTAL;;;73,28;;precos consultados em 29/10/2026, sem frete
