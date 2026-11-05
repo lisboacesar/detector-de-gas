@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main, ci]
+  pull_request:
+
+jobs:
+  firmware:
+    name: Firmware compila (ESP32-C3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Usar o modelo de senhas
+        run: cp firmware/DetectorDeGasComDashboard/secrets.example.h firmware/DetectorDeGasComDashboard/secrets.h
+      - uses: arduino/compile-sketches@v1
+        with:
+          fqbn: esp32:esp32:esp32c3
+          platforms: |
+            - name: esp32:esp32
+              source-url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          libraries: |
+            - name: PubSubClient
+          sketch-paths: |
+            - firmware/DetectorDeGasComDashboard
+          enable-warnings-report: true
+
+  ferramentas:
+    name: Ferramentas Python e simulação reproduzível
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TZ: America/Fortaleza
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r ferramentas/requirements.txt ruff
+      - name: Erros de sintaxe e nomes indefinidos
+        run: ruff check ferramentas --select E9,F63,F7,F82
+      - name: Simulação gera o mesmo registro guardado em evidencias/
+        run: |
+          cd ferramentas
+          python simular_ensaios.py > /dev/null
+          cd ..
+          git diff --exit-code -- evidencias/
