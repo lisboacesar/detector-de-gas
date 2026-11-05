@@ -1,5 +1,7 @@
 # Detector de gás com ESP32-C3, MQ-2 e MQTT
 
+[![CI](https://github.com/lisboacesar/detector-de-gas/actions/workflows/ci.yml/badge.svg)](https://github.com/lisboacesar/detector-de-gas/actions/workflows/ci.yml)
+
 Protótipo da disciplina Internet das Coisas (UNDB). Detecta gases inflamáveis e fumaça com um sensor MQ-2, aciona um alarme local que funciona mesmo sem rede e envia as leituras por MQTT para um broker na nuvem, de onde um aplicativo web mostra os dados em tempo real e um coletor grava o histórico em banco de dados.
 
 ![Arquitetura](figuras/arquitetura.png)
